@@ -15,7 +15,7 @@ class DataProcessorASC:
 
     def read_excel(self, file_path: Path) -> pd.DataFrame:
         """Read Excel file into DataFrame, finding the correct header row"""
-        logger.info(f" Reading Excel file: {file_path}")
+        logger.info(f"📖 Reading Excel file: {file_path}")
         
         if file_path.suffix.lower() not in ['.xlsx', '.xls']:
              raise ValueError(f"File is not an Excel file: {file_path}")
@@ -33,7 +33,7 @@ class DataProcessorASC:
                     self.SOURCE_DESC_COL.upper() in row_str):
                     
                     header_row_idx = idx 
-                    logger.info(f" Found header row at index: {header_row_idx}")
+                    logger.info(f"✅ Found header row at index: {header_row_idx}")
                     break
             
             if header_row_idx is None:
@@ -42,17 +42,17 @@ class DataProcessorASC:
             # Now, read the file again using the correct header row
             df = pd.read_excel(file_path, header=header_row_idx)
             
-            logger.info(f" Loaded {len(df)} rows (raw)")
-            logger.info(f" Raw columns found: {list(df.columns)}")
+            logger.info(f"✅ Loaded {len(df)} rows (raw)")
+            logger.info(f"📋 Raw columns found: {list(df.columns)}")
             return df
 
         except Exception as e:
-            logger.error(f" Error reading Excel file: {e}")
+            logger.error(f"❌ Error reading Excel file: {e}")
             raise
 
     def clean_data(self, df: pd.DataFrame) -> pd.DataFrame:
         """Clean the raw DataFrame based on ASC requirements"""
-        logger.info(" Cleaning data...")
+        logger.info("🧹 Cleaning data...")
 
         # --- Find and map columns ---
         columns_mapping = {}
@@ -70,9 +70,9 @@ class DataProcessorASC:
         rate_col_name = next((col for col in available_columns if self.SOURCE_RATE_MARKER.lower() in col.lower()), None)
         if rate_col_name: 
             columns_mapping['80th'] = rate_col_name
-            logger.info(f"Found Payment Rate column: '{rate_col_name}'")
+            logger.info(f"✅ Found Payment Rate column: '{rate_col_name}'")
 
-        logger.info(f" Column mapping: {columns_mapping}")
+        logger.info(f"📋 Column mapping: {columns_mapping}")
 
         # --- Check required columns ---
         required_keys = ['code', 'code_description', '80th']
@@ -87,27 +87,27 @@ class DataProcessorASC:
         rel_date_value = rate_col_full_name.lower().replace(self.SOURCE_RATE_MARKER.lower(), "").strip()
         rel_date_value = rel_date_value.title() 
         
-        logger.info(f" Extracted 'rel_date' value: {rel_date_value}")
+        logger.info(f"📅 Extracted 'rel_date' value: {rel_date_value}")
     
         df_cleaned = df[list(columns_mapping.values())].copy()
         df_cleaned.columns = required_keys
 
-        logger.info(" Adding 'data_type' column...")
+        logger.info("➕ Adding 'data_type' column...")
         df_cleaned['data_type'] = 'Medicare Facility'
 
-        logger.info(f"Adding 'rel_date' column with value: {rel_date_value}")
+        logger.info(f"➕ Adding 'rel_date' column with value: {rel_date_value}")
         df_cleaned['rel_date'] = rel_date_value
     
         df_cleaned = df_cleaned.dropna(subset=["code"])
         df_cleaned = df_cleaned[df_cleaned["code"].astype(str).str.strip().str.len() > 0]
 
-        logger.info(" Converting '80th' column to numeric...")
+        logger.info("🔢 Converting '80th' column to numeric...")
         
 
         df_cleaned['80th'] = pd.to_numeric(df_cleaned['80th'], errors='coerce')
         
 
-        logger.info(" Converting ALL NaN values to None for JSON compliance...")
+        logger.info("🔧 Converting ALL NaN values to None for JSON compliance...")
         
         for col in df_cleaned.columns:
             # Check if the column has any nulls (NaN or NaT)
@@ -119,6 +119,6 @@ class DataProcessorASC:
         df_cleaned = df_cleaned.dropna(how="all")
         df_cleaned.reset_index(drop=True, inplace=True)
 
-        logger.info(f" Cleaned data: {len(df_cleaned)} rows remaining")
-        logger.info(f" Sample data (post-fix):\n{df_cleaned.head().to_string()}")
+        logger.info(f"✅ Cleaned data: {len(df_cleaned)} rows remaining")
+        logger.info(f"📊 Sample data (post-fix):\n{df_cleaned.head().to_string()}")
         return df_cleaned
